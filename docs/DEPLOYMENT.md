@@ -9,7 +9,7 @@
 需要能够拉取 Docker 镜像和 Python 依赖，8000 / 8080 端口未被占用，并具有仓库读取权限。
 
 ```bash
-git clone git@github.com:xingx2/PolicyForge-PMS.git
+git clone git@github.com:HK-AI-Security-Lab/PolicyForge-PMS.git
 cd PolicyForge-PMS
 python3 scripts/init_env.py
 docker compose config --quiet

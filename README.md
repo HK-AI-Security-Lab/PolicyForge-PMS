@@ -1,5 +1,7 @@
 # PolicyForge PMS
 
+代码仓库：`git@github.com:HK-AI-Security-Lab/PolicyForge-PMS.git`
+
 轻量策略管理后端：**Nacos 保存策略并提供编辑界面，FastAPI 提供统一的策略 API**。
 
 面向智能体的安全约束、工具访问规则、网络限制和其他文本策略。正文原样保存，
@@ -193,6 +195,10 @@ API 自动维护一个保留标签 `format-<格式>`，例如 `format-rego`。
 | GET | `/api/v1/policies/{group}/{data_id}/raw` | 读取原始 UTF-8 文本 |
 | PUT | `/api/v1/policies/{group}/{data_id}` | 创建或完整替换并发布 |
 | DELETE | `/api/v1/policies/{group}/{data_id}` | 删除策略 |
+
+当前 API 覆盖策略的日常查询与增删改，以及正文、描述、标签、格式和归属应用管理。
+命名空间的创建/删除、历史版本查看与回滚、Nacos 用户/角色管理仍使用 Nacos 控制台；
+PMS API 暂未封装这些管理接口，也不提供策略执行、审批流或逐用户权限管理。
 
 策略接口省略 `namespace` 时使用 `POLICYFORGE_NAMESPACE`，默认 `policyforge-pms`。
 访问其他命名空间时显式传入，例如 `?namespace=public` 或 `?namespace=dev`。
