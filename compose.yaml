@@ -1,0 +1,69 @@
+name: policyforge-pms
+
+services:
+  nacos:
+    image: nacos/nacos-server:v3.3.0
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+      PREFER_HOST_MODE: hostname
+      NACOS_AUTH_ENABLE: "true"
+      NACOS_AUTH_ADMIN_ENABLE: "true"
+      NACOS_AUTH_CONSOLE_ENABLE: "true"
+      NACOS_AUTH_TOKEN: ${NACOS_AUTH_TOKEN:?Run python3 scripts/init_env.py first}
+      NACOS_AUTH_IDENTITY_KEY: policyforge
+      NACOS_AUTH_IDENTITY_VALUE: ${NACOS_AUTH_IDENTITY_VALUE:?Missing server identity}
+      JVM_XMS: 256m
+      JVM_XMX: 512m
+      JVM_XMN: 128m
+    ports:
+      - "127.0.0.1:${NACOS_CONSOLE_PORT:-8080}:8080"
+    volumes:
+      - nacos-data:/home/nacos/data
+      - nacos-logs:/home/nacos/logs
+
+  nacos-init:
+    image: python:3.13-slim
+    restart: "no"
+    depends_on:
+      nacos:
+        condition: service_started
+    environment:
+      NACOS_URL: http://nacos:8080
+      NACOS_PASSWORD: ${NACOS_PASSWORD:?Missing Nacos password}
+    volumes:
+      - ./scripts/bootstrap_nacos.py:/bootstrap.py:ro
+    command: ["python", "/bootstrap.py"]
+
+  api:
+    image: policyforge-pms:0.1.0
+    build: .
+    restart: unless-stopped
+    init: true
+    depends_on:
+      nacos-init:
+        condition: service_completed_successfully
+    environment:
+      NACOS_URL: http://nacos:8080
+      NACOS_USERNAME: nacos
+      NACOS_PASSWORD: ${NACOS_PASSWORD:?Missing Nacos password}
+      POLICYFORGE_API_KEY: ${POLICYFORGE_API_KEY:?Missing management API key}
+      POLICYFORGE_READ_KEY: ${POLICYFORGE_READ_KEY:?Missing reader API key}
+    ports:
+      - "127.0.0.1:${POLICYFORGE_PORT:-8000}:8000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  nacos-data:
+  nacos-logs:

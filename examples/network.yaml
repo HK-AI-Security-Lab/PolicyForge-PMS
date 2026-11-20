@@ -1,0 +1,7 @@
+# Illustrative policy only; interpretation belongs to your execution component.
+version: 1
+agent: research-agent
+network:
+  allowed_domains:
+    - docs.example.com
+  default: deny

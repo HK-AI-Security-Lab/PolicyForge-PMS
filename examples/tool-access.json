@@ -1,0 +1,5 @@
+{
+  "agent": "research-agent",
+  "allow": ["web.search", "filesystem.read"],
+  "require_approval": ["filesystem.write"]
+}
