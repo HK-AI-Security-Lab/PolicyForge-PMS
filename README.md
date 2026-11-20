@@ -26,7 +26,10 @@
 
 ## 三步启动
 
-要求：Docker Engine / Docker Desktop、Docker Compose v2，以及宿主机 Python 3。
+交给开发人员时，请使用 [部署交接文档](docs/DEPLOYMENT.md)，其中包含完整克隆步骤、
+变量注入说明、密钥获取方式、首次验证和远程访问方法。
+
+要求：Docker Engine / Docker Desktop、Docker Compose v2，以及宿主机 Python 3.10+。
 
 ```bash
 cd PolicyForge-PMS
@@ -48,6 +51,9 @@ docker compose up -d --build
 | API 只读密钥 | 本机 `.env` 中的 `POLICYFORGE_READ_KEY` |
 
 在 `/docs` 点击 **Authorize**，填入 API Key 后即可调用。
+`.env` 在部署机器生成；Compose 将相应值注入各容器，文件本身不进入镜像。
+开发人员可以读取该部署的 `.env` 或运行 `docker compose exec -T api printenv POLICYFORGE_READ_KEY`
+取得实际运行的只读密钥。首次部署不需要你本机的密钥，也无需手动向 Nacos 申请 API Key。
 示例默认账号密码为 **`nacos / nacos`**。API Key、Nacos 签名密钥及节点身份密钥仍随机生成；
 `.env` 权限为 0600，Git 和 Docker 构建上下文都忽略它。
 脚本不会覆盖已有 `.env`。已有数据卷时修改 `.env` 不会自动重置 Nacos 密码：
