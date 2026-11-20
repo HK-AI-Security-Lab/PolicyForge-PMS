@@ -49,19 +49,21 @@ def seed_examples(base, token, examples_dir=EXAMPLES, namespace=DEFAULT_NAMESPAC
     catalog = json.loads((examples_dir / "catalog.json").read_text(encoding="utf-8"))
     created = skipped = 0
     for entry in catalog:
-        identity = {"namespaceId": namespace, "groupName": entry["group"], "dataId": entry["file"]}
+        data_id = entry.get("data_id", Path(entry["file"]).name)
+        identity = {"namespaceId": namespace, "groupName": entry["group"], "dataId": data_id}
         if nacos_request(base, token, "GET", identity) is not None:
             skipped += 1
             continue
         content = (examples_dir / entry["file"]).read_bytes().decode("utf-8")
         fmt = entry["format"]
+        tags = entry.get("tags", ["demo", "agent-research"])
         fields = {
             **identity,
             "content": content,
             "desc": entry["description"],
             "type": fmt if fmt in NATIVE_FORMATS else "text",
-            "configTags": f"demo,agent-research,format-{fmt}",
-            "appName": "policyforge-demo",
+            "configTags": ",".join([*tags, f"format-{fmt}"]),
+            "appName": entry.get("app_name", "policyforge-demo"),
         }
         if nacos_request(base, token, "POST", fields) is not True:
             raise RuntimeError(f"Failed to import example: {entry['group']}/{entry['file']}")

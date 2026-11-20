@@ -1,0 +1,43 @@
+// PathGuard authorization schema (baseline demo contract).
+//
+// The runtime evaluator currently implements a deliberately small Cedar
+// subset.  This schema is the canonical type/action contract for the policy
+// set and can be validated with the official Cedar engine in CI or at deploy
+// time.
+
+entity Agent;
+entity Tool;
+entity TaskType;
+
+action "task:create" appliesTo {
+    principal: Agent,
+    resource: TaskType
+};
+
+action "task:close" appliesTo {
+    principal: Agent,
+    resource: TaskType
+};
+
+action "a2a:message:send" appliesTo {
+    principal: Agent,
+    resource: Agent,
+    context: { task_type: String }
+};
+
+action "a2a:tasks:get" appliesTo {
+    principal: Agent,
+    resource: Agent,
+    context: { task_type: String }
+};
+
+action "mcp:discover" appliesTo {
+    principal: Agent,
+    resource: Tool
+};
+
+action "mcp:tools:call" appliesTo {
+    principal: Agent,
+    resource: Tool,
+    context: { task_type: String }
+};

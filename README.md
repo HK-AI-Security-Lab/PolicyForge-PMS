@@ -20,7 +20,7 @@
 - 直接使用 Nacos 控制台编辑、查看历史、比较版本及回滚。
 - 管理 API Key 和可选只读 API Key；Nacos 账号密码只在服务端使用。
 - 可选 `expected_md5` 透传到 Nacos CAS，避免正文已变更时覆盖旧版本。
-- 首次启动自动导入 10 条多格式策略示例，登录控制台即可查看和编辑。
+- 首次启动自动导入 16 份配置：10 条通用示例，以及 PathGuard / OpenClaw 的 5 份 Cedar 策略与 1 份 schema。
 
 **保存即发布，没有独立草稿或审批状态。PMS 不执行策略，也不判断某次操作是否允许。**
 
@@ -66,12 +66,13 @@ docker compose logs --tail=80 nacos nacos-init api
 
 默认导入到独立命名空间 **`PolicyForge-PMS`**（ID：`policyforge-pms`）。
 在 Nacos 控制台顶部的“命名空间”下拉框选择 `PolicyForge-PMS(policyforge-pms)`，
-再进入左侧“配置管理 → 配置列表”，即可直接查看 10 条策略，无需标签筛选。
+再进入左侧“配置管理 → 配置列表”，即可直接查看 16 份策略与 schema 配置，无需标签筛选。
 `public` 中可能还有 Nacos 的内部配置、Skill 和 AgentSpec 资源，不是本项目的策略样例。
 
-应用名统一为 `policyforge-demo`，标签包含 `demo`、`agent-research`、`format-<格式>`。
+10 条通用示例的应用名为 `policyforge-demo`，标签包含 `demo`、`agent-research`、`format-<格式>`。
+项目策略使用各自的应用名与项目标签，见下方“项目 Cedar 策略”。
 标签可用于 PMS API 查询；本项目使用的 Nacos 3.3.0 新版配置列表没有标签筛选框，
-页面提供 Data ID、Group 和归属应用筛选，界面操作以命名空间和这些字段为主。
+页面提供 Data ID、Group 和归属应用筛选。**旧版控制台的“高级查询”支持标签筛选**，见下方操作步骤。
 默认命名空间由 `.env` 中的 `POLICYFORGE_NAMESPACE=policyforge-pms` 指定，
 API 默认读写、就绪检查和示例导入共用此设置。初始化不会删除或修改其他命名空间的配置。
 
@@ -88,7 +89,7 @@ API 默认读写、就绪检查和示例导入共用此设置。初始化不会�
 | `RESOURCE_ACCESS` | `examples/resource-access.xml` | 项目文档访问权限 |
 | `RESOURCE_ACCESS` | `examples/custom-access.dsl` | 自定义规则语言 |
 
-Data ID 是表中文件的文件名，不包含 `examples/`。示例清单和描述在 `examples/catalog.json`。
+Data ID 是表中文件的文件名，不包含 `examples/`。示例清单、描述及来源在 `examples/catalog.json`。
 这些例子演示不同策略的表达与组织，字段由相应执行组件解释；
 自定义 DSL 没有附带解析器，XML 示例不是 XACML。它们不会因导入 PMS 而自动执行。
 
@@ -108,6 +109,49 @@ python3 scripts/seed_examples.py
 
 程序查询样例可以直接调用 `/api/v1/policies`，也可调用 `/api/v1/policies?tag=demo` 或
 `/api/v1/policies?app_name=policyforge-demo`，并携带 `X-API-Key`。
+
+### 项目 Cedar 策略
+
+以下 6 份文件按原始字节导入，保留注释和注解，不拆分或重写规则：
+
+| Group | Data ID | 来源与用途 |
+| --- | --- | --- |
+| `PATHGUARD` | `policies.cedar` | PathGuard 任务生命周期、A2A 委派与 MCP 工具访问 |
+| `PATHGUARD` | `schema.cedarschema` | 配套实体、Action、Context 类型契约 |
+| `OPENCLAW_TASK_AUTH` | `policies.cedar` | 用户/渠道 → Agent → Skill → Tool 的四道授权关卡 |
+| `OPENCLAW_TASK_AUTH` | `openclaw-explicit.cedar` | 编译后的显式授权与目录注解 |
+| `AGENTICCORE` | `policies.cedar` | 执行期意图、技能与实际工具的一致性检查 |
+| `AGENTICCORE` | `explicit.cedar` | 天气查询、工单创建的显式工具授权 |
+
+原始文件快照在 `examples/projects/`，`catalog.json` 记录源项目、相对路径、Git commit 和 SHA-256。
+PathGuard 来源版本为 `144a4aef25b7126e819cda0334b2b422f04a5ca5`；
+OpenClaw / AgenticCore 来源版本为 `80f3379a8a22c863bef5f62bffd8a7088794b4de`。
+
+这些是存储快照；原项目的运行时仍使用其原策略来源。PMS 不执行 Cedar，也未增加 Cedar 语义校验。
+OpenClaw / AgenticCore 的关系型策略依赖源项目构造的 entities/context；
+显式策略的目录注解由原项目读取，`__catalog` 声明不授予权限。
+Cedar 和 schema 在 Nacos 中按 TEXT 存储，原格式保存在 `format-cedar` / `format-cedarschema` 标签中。
+
+### 在控制台按标签筛选
+
+1. 点击新版控制台顶部的“旧版控制台”，或打开 `http://localhost:8080/legacy/`。
+2. 在“配置管理 → 配置列表”选择 `PolicyForge-PMS` 命名空间。
+3. 点击 **高级查询**，会出现 **标签** 输入框。
+4. 输入 `format-cedar`，点击下拉候选项使其成为已选标签，再点击 **查询**。
+
+实测当前数据返回 5 份 Cedar 策略。仅输入文字、不选择候选项，不会提交标签条件。
+筛选 `cedar` 会包含 schema，共 6 份。也可按项目标签筛选：
+
+| 标签 | 当前结果数 | 含义 |
+| --- | --- | --- |
+| `format-cedar` | 5 | 所有 Cedar 策略文件 |
+| `cedar` | 6 | Cedar 策略与 schema |
+| `project-pathguard` | 2 | PathGuard 策略和 schema |
+| `project-openclaw-task-authorization` | 4 | OpenClaw 与其 AgenticCore 策略 |
+| `demo` | 10 | 通用多格式示例 |
+
+新版控制台可通过 Group=`PATHGUARD` / `OPENCLAW_TASK_AUTH` / `AGENTICCORE`，
+或归属应用=`pathguard` / `openclaw-task-authorization` 查找这些策略。
 
 ## 在控制台组织策略
 
@@ -201,6 +245,22 @@ PUT 是**完整替换**：省略 `description`、`tags`、`app_name` 就清空�
 | `page_size` | `20` | 1–100 |
 
 查自定义格式也可以用 `tag=format-rego`。
+
+例如，从项目目录导出本机 API 密钥后，按 Cedar 标签查询：
+
+```bash
+set -a
+. ./.env
+set +a
+curl --get 'http://localhost:8000/api/v1/policies' \
+  -H "X-API-Key: $POLICYFORGE_READ_KEY" \
+  --data-urlencode 'tag=format-cedar' \
+  --data-urlencode 'namespace=policyforge-pms'
+```
+
+只查询 PathGuard 的 Cedar 策略时，再加 `--data-urlencode 'group=PATHGUARD'`，
+当前返回 1 份。`tag` 一次接受一个标签，不能用逗号传多个标签或表示 AND/OR；
+它可以与 `group`、`app_name`、`data_id`、`content_contains` 同时使用。
 返回 `items / total / page / pages`；列表不包含正文，按需读取详情。
 底层沿用 Nacos 的匹配语义，正文搜索适合管理检索，不建议用于每次工具调用的实时鉴权路径。
 
@@ -269,12 +329,13 @@ python3 scripts/smoke.py
 脚本验证多格式原文往返、元数据、查询、分页、修改、CAS 冲突、只读密钥和删除。
 单元测试使用 Nacos HTTP 替身，不等同于真实服务器联调。
 
-2026-11-20 验证记录：24 项单元测试通过；Ruff 检查和 Compose 配置校验通过；
+2026-11-20 验证记录：26 项单元测试通过；Ruff 检查和 Compose 配置校验通过；
 已在本机构建 `policyforge-pms:0.1.0`（Linux ARM64），并与 Nacos 3.3.0 真实容器联调。
 多格式原文、标签查询、内容搜索、分页、CAS 冲突、只读权限、删除均通过；
 另验证 XML / Properties / TOML / HTML / DSL 与 CRLF 换行保留，以及 Nacos 重启后的数据持久化。
-测试结束已删除临时策略，保留 10 条可编辑的演示策略。AMD64 镜像未在本机验证。
-已验证独立命名空间创建、默认命名空间读写和显式覆盖；控制台显示 `PolicyForge-PMS` 共 10 条配置。
+测试结束已删除临时策略，保留 16 份可编辑的演示和项目配置。AMD64 镜像未在本机验证。
+已验证独立命名空间创建、默认命名空间读写和显式覆盖，以及 6 份导入文件的源 SHA-256。
+API 标签筛选、标签与分组/应用组合筛选、空结果均通过；旧版控制台高级查询 `format-cedar` 实测返回 5 份。
 当前测试依赖有一条 Starlette 关于未来更换测试 HTTP 客户端的弃用提示，不影响测试结果。
 
 `uv.lock` 锁定开发依赖，`requirements.txt` 包含部署依赖版本和包哈希。更新依赖后重新导出：

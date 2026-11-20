@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import stat
 import tomllib
@@ -34,8 +35,10 @@ def test_demo_env_defaults_and_preserves_existing_file(tmp_path):
 
 def test_catalog_files_exist_and_structured_examples_parse():
     catalog = json.loads((EXAMPLES / "catalog.json").read_text())
-    identities = [(entry["group"], entry["file"]) for entry in catalog]
-    assert len(catalog) == 10 and len(set(identities)) == 10
+    identities = [
+        (entry["group"], entry.get("data_id", Path(entry["file"]).name)) for entry in catalog
+    ]
+    assert len(catalog) == 16 and len(set(identities)) == 16
     for entry in catalog:
         content = (EXAMPLES / entry["file"]).read_text()
         assert content.strip()
@@ -69,7 +72,7 @@ def test_seed_retains_edits_and_only_recreates_missing_examples(monkeypatch):
 
     monkeypatch.setattr(seed_examples, "nacos_request", request)
     assert seed_examples.seed_examples("http://nacos", "token", EXAMPLES) == {
-        "created": 10,
+        "created": 16,
         "skipped": 0,
     }
     edited = ("NETWORK", "network.yaml")
@@ -77,17 +80,22 @@ def test_seed_retains_edits_and_only_recreates_missing_examples(monkeypatch):
     records[edited]["configTags"] = "user-tag"
     assert seed_examples.seed_examples("http://nacos", "token", EXAMPLES) == {
         "created": 0,
-        "skipped": 10,
+        "skipped": 16,
     }
     del records[("TOOL_ACCESS", "tool-access.json")]
     assert seed_examples.seed_examples("http://nacos", "token", EXAMPLES) == {
         "created": 1,
-        "skipped": 9,
+        "skipped": 15,
     }
     assert records[edited]["content"] == "User-edited policy; retain it."
     assert records[edited]["configTags"] == "user-tag"
     assert records[("AUTHORIZATION", "authorization.rego")]["type"] == "text"
     assert records[("SANDBOX", "sandbox.toml")]["type"] == "toml"
+    cedar = records[("PATHGUARD", "policies.cedar")]
+    assert cedar["type"] == "text"
+    assert cedar["appName"] == "pathguard"
+    assert cedar["configTags"] == "project-pathguard,cedar,a2a,mcp,format-cedar"
+    assert records[("OPENCLAW_TASK_AUTH", "policies.cedar")]["content"] != cedar["content"]
     assert len(namespace_creations) == 1
     assert namespace_creations[0]["namespaceName"] == "PolicyForge-PMS"
 
@@ -118,3 +126,17 @@ def test_seed_stops_if_namespace_cannot_be_created(monkeypatch):
     with pytest.raises(RuntimeError, match="Failed to create policy namespace"):
         seed_examples.seed_examples("http://nacos", "token", EXAMPLES)
     assert seed_examples.CONFIG_PATH not in calls
+
+
+def test_imported_project_files_match_recorded_source_hashes():
+    catalog = json.loads((EXAMPLES / "catalog.json").read_text())
+    imported = [entry for entry in catalog if "source" in entry]
+    assert len(imported) == 6
+    for entry in imported:
+        source = entry["source"]
+        assert (
+            hashlib.sha256((EXAMPLES / entry["file"]).read_bytes()).hexdigest() == source["sha256"]
+        )
+        assert len(source["commit"]) == 40
+        assert entry["format"] in ("cedar", "cedarschema")
+        assert "cedar" in entry["tags"]

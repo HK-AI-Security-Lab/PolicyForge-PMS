@@ -84,6 +84,7 @@ def api():
         ("a.rego", "package example\ndefault allow := false\n", "rego", "text"),
         ("a.md", "# 安全约束\n\n请先请求授权。\n", "md", "text"),
         ("a.dsl", "allow(agent, read)  # preserve spaces\n", "dsl", "text"),
+        ("a.cedar", 'permit(principal, action == Action::"read", resource);\n', "cedar", "text"),
     ],
 )
 def test_formats_round_trip_exactly(api, name, content, fmt, storage):

@@ -1,12 +1,181 @@
 [
-  {"file": "network.yaml", "group": "NETWORK", "description": "示例：研究智能体仅访问允许的域名", "format": "yaml"},
-  {"file": "tool-access.json", "group": "TOOL_ACCESS", "description": "示例：工具白名单与写入审批要求", "format": "json"},
-  {"file": "authorization.rego", "group": "AUTHORIZATION", "description": "示例：用 Rego 表达研究智能体的读取权限", "format": "rego"},
-  {"file": "constraints.md", "group": "GUARDRAILS", "description": "示例：自然语言安全约束与不可信输入处理", "format": "md"},
-  {"file": "sandbox.toml", "group": "SANDBOX", "description": "示例：沙箱目录、进程与资源限制", "format": "toml"},
-  {"file": "data-protection.yaml", "group": "DATA_PROTECTION", "description": "示例：敏感数据分类、脱敏与外发限制", "format": "yaml"},
-  {"file": "approval-policy.json", "group": "APPROVAL", "description": "示例：邮件发送、文件删除与部署的人工审批", "format": "json"},
-  {"file": "rate-limits.properties", "group": "RATE_LIMIT", "description": "示例：工具调用频率、并发与执行时长限制", "format": "properties"},
-  {"file": "resource-access.xml", "group": "RESOURCE_ACCESS", "description": "示例：项目文档的读取与写入权限", "format": "xml"},
-  {"file": "custom-access.dsl", "group": "RESOURCE_ACCESS", "description": "示例：自定义 DSL 的允许、拒绝和审批规则", "format": "dsl"}
+  {
+    "file": "network.yaml",
+    "group": "NETWORK",
+    "description": "示例：研究智能体仅访问允许的域名",
+    "format": "yaml"
+  },
+  {
+    "file": "tool-access.json",
+    "group": "TOOL_ACCESS",
+    "description": "示例：工具白名单与写入审批要求",
+    "format": "json"
+  },
+  {
+    "file": "authorization.rego",
+    "group": "AUTHORIZATION",
+    "description": "示例：用 Rego 表达研究智能体的读取权限",
+    "format": "rego"
+  },
+  {
+    "file": "constraints.md",
+    "group": "GUARDRAILS",
+    "description": "示例：自然语言安全约束与不可信输入处理",
+    "format": "md"
+  },
+  {
+    "file": "sandbox.toml",
+    "group": "SANDBOX",
+    "description": "示例：沙箱目录、进程与资源限制",
+    "format": "toml"
+  },
+  {
+    "file": "data-protection.yaml",
+    "group": "DATA_PROTECTION",
+    "description": "示例：敏感数据分类、脱敏与外发限制",
+    "format": "yaml"
+  },
+  {
+    "file": "approval-policy.json",
+    "group": "APPROVAL",
+    "description": "示例：邮件发送、文件删除与部署的人工审批",
+    "format": "json"
+  },
+  {
+    "file": "rate-limits.properties",
+    "group": "RATE_LIMIT",
+    "description": "示例：工具调用频率、并发与执行时长限制",
+    "format": "properties"
+  },
+  {
+    "file": "resource-access.xml",
+    "group": "RESOURCE_ACCESS",
+    "description": "示例：项目文档的读取与写入权限",
+    "format": "xml"
+  },
+  {
+    "file": "custom-access.dsl",
+    "group": "RESOURCE_ACCESS",
+    "description": "示例：自定义 DSL 的允许、拒绝和审批规则",
+    "format": "dsl"
+  },
+  {
+    "file": "projects/pathguard/authz/policies.cedar",
+    "data_id": "policies.cedar",
+    "group": "PATHGUARD",
+    "description": "PathGuard：任务生命周期、A2A 委派与 MCP 工具授权；来源 authz/policies.cedar @144a4aef25b7",
+    "format": "cedar",
+    "tags": [
+      "project-pathguard",
+      "cedar",
+      "a2a",
+      "mcp"
+    ],
+    "app_name": "pathguard",
+    "source": {
+      "project": "PathGuard",
+      "path": "authz/policies.cedar",
+      "commit": "144a4aef25b7126e819cda0334b2b422f04a5ca5",
+      "sha256": "01dbc3aee92b8aa9b049fb006a9f7c8655f33723e97979b089bb1bbb6a53b32f"
+    }
+  },
+  {
+    "file": "projects/pathguard/authz/schema.cedarschema",
+    "data_id": "schema.cedarschema",
+    "group": "PATHGUARD",
+    "description": "PathGuard：Cedar 实体、动作和上下文类型契约；来源 authz/schema.cedarschema @144a4aef25b7",
+    "format": "cedarschema",
+    "tags": [
+      "project-pathguard",
+      "cedar",
+      "schema"
+    ],
+    "app_name": "pathguard",
+    "source": {
+      "project": "PathGuard",
+      "path": "authz/schema.cedarschema",
+      "commit": "144a4aef25b7126e819cda0334b2b422f04a5ca5",
+      "sha256": "d772d5b60326133ba4321b0f715709c712166e4810d9c13d0ec1b882773453e0"
+    }
+  },
+  {
+    "file": "projects/openclaw-task-authorization/policy/cedar/policies.cedar",
+    "data_id": "policies.cedar",
+    "group": "OPENCLAW_TASK_AUTH",
+    "description": "OpenClaw：用户/渠道、智能体、意图/技能、工具四道授权关卡；来源 policy/cedar/policies.cedar @80f3379a8a22",
+    "format": "cedar",
+    "tags": [
+      "project-openclaw-task-authorization",
+      "cedar",
+      "four-gates",
+      "template"
+    ],
+    "app_name": "openclaw-task-authorization",
+    "source": {
+      "project": "openclaw_task_authorization",
+      "path": "policy/cedar/policies.cedar",
+      "commit": "80f3379a8a22c863bef5f62bffd8a7088794b4de",
+      "sha256": "12c54d94ec4780913a527886bc8897171b98d27add13d96e3fd56c84c6180dce"
+    }
+  },
+  {
+    "file": "projects/openclaw-task-authorization/policy/cedar/openclaw-explicit.cedar",
+    "data_id": "openclaw-explicit.cedar",
+    "group": "OPENCLAW_TASK_AUTH",
+    "description": "OpenClaw：包含目录注解的显式 Cedar 授权策略；来源 policy/cedar/openclaw-explicit.cedar @80f3379a8a22",
+    "format": "cedar",
+    "tags": [
+      "project-openclaw-task-authorization",
+      "cedar",
+      "four-gates",
+      "compiled"
+    ],
+    "app_name": "openclaw-task-authorization",
+    "source": {
+      "project": "openclaw_task_authorization",
+      "path": "policy/cedar/openclaw-explicit.cedar",
+      "commit": "80f3379a8a22c863bef5f62bffd8a7088794b4de",
+      "sha256": "549b9d3634fe2d1b485858165a9e92a8490ffd60ff5ff120dd6419c9651caa0d"
+    }
+  },
+  {
+    "file": "projects/openclaw-task-authorization/agenticcore/pdp/policies.cedar",
+    "data_id": "policies.cedar",
+    "group": "AGENTICCORE",
+    "description": "AgenticCore：执行期意图、技能与实际工具的一致性检查；来源 agenticcore/pdp/policies.cedar @80f3379a8a22",
+    "format": "cedar",
+    "tags": [
+      "project-openclaw-task-authorization",
+      "cedar",
+      "agenticcore",
+      "template"
+    ],
+    "app_name": "openclaw-task-authorization",
+    "source": {
+      "project": "openclaw_task_authorization",
+      "path": "agenticcore/pdp/policies.cedar",
+      "commit": "80f3379a8a22c863bef5f62bffd8a7088794b4de",
+      "sha256": "8a7ecb26ec163ccc03be9e532e7f5264ff755cd5e25fd4d2b0a4b1fb6e821627"
+    }
+  },
+  {
+    "file": "projects/openclaw-task-authorization/agenticcore/example_agent/policy/explicit.cedar",
+    "data_id": "explicit.cedar",
+    "group": "AGENTICCORE",
+    "description": "AgenticCore：天气查询和工单工具的显式授权策略；来源 agenticcore/example_agent/policy/explicit.cedar @80f3379a8a22",
+    "format": "cedar",
+    "tags": [
+      "project-openclaw-task-authorization",
+      "cedar",
+      "agenticcore",
+      "compiled"
+    ],
+    "app_name": "openclaw-task-authorization",
+    "source": {
+      "project": "openclaw_task_authorization",
+      "path": "agenticcore/example_agent/policy/explicit.cedar",
+      "commit": "80f3379a8a22c863bef5f62bffd8a7088794b4de",
+      "sha256": "04cb69069a2c2a76da4ff02ba30893548270c91cf3266e2a33d65cbc42de5317"
+    }
+  }
 ]
