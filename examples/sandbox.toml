@@ -1,0 +1,19 @@
+# Illustrative schema: requires your sandbox adapter to enforce these fields.
+version = 1
+agent = "research-agent"
+
+[filesystem]
+read_only = ["/workspace/reference"]
+read_write = ["/workspace/output"]
+deny = ["/root/.ssh", "/run/secrets"]
+follow_symlinks = false
+
+[process]
+allow_commands = ["python3", "rg", "cat"]
+allow_shell = false
+max_seconds = 60
+
+[resources]
+memory_mb = 512
+cpu_count = 1
+max_processes = 32

@@ -1,0 +1,12 @@
+[
+  {"file": "network.yaml", "group": "NETWORK", "description": "示例：研究智能体仅访问允许的域名", "format": "yaml"},
+  {"file": "tool-access.json", "group": "TOOL_ACCESS", "description": "示例：工具白名单与写入审批要求", "format": "json"},
+  {"file": "authorization.rego", "group": "AUTHORIZATION", "description": "示例：用 Rego 表达研究智能体的读取权限", "format": "rego"},
+  {"file": "constraints.md", "group": "GUARDRAILS", "description": "示例：自然语言安全约束与不可信输入处理", "format": "md"},
+  {"file": "sandbox.toml", "group": "SANDBOX", "description": "示例：沙箱目录、进程与资源限制", "format": "toml"},
+  {"file": "data-protection.yaml", "group": "DATA_PROTECTION", "description": "示例：敏感数据分类、脱敏与外发限制", "format": "yaml"},
+  {"file": "approval-policy.json", "group": "APPROVAL", "description": "示例：邮件发送、文件删除与部署的人工审批", "format": "json"},
+  {"file": "rate-limits.properties", "group": "RATE_LIMIT", "description": "示例：工具调用频率、并发与执行时长限制", "format": "properties"},
+  {"file": "resource-access.xml", "group": "RESOURCE_ACCESS", "description": "示例：项目文档的读取与写入权限", "format": "xml"},
+  {"file": "custom-access.dsl", "group": "RESOURCE_ACCESS", "description": "示例：自定义 DSL 的允许、拒绝和审批规则", "format": "dsl"}
+]

@@ -1,0 +1,21 @@
+# 示例结构，需要数据保护执行组件解释；PMS 仅保存原文。
+version: 1
+agent: research-agent
+default_external_transfer: deny
+classifications:
+  - name: credentials
+    match_labels: [api_key, password, access_token, private_key]
+    actions:
+      log: redact
+      user_output: redact
+      external_transfer: deny
+  - name: personal_data
+    match_labels: [email, phone, identity_number]
+    actions:
+      log: redact
+      user_output: mask
+      external_transfer: require_approval
+  - name: public
+    actions:
+      user_output: allow
+      external_transfer: allow

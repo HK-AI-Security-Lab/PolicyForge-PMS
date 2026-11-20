@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Illustrative XML vocabulary; this is not an XACML document. -->
+<access-policy version="1" agent="research-agent" default="deny">
+  <rule effect="allow" action="read">
+    <resource type="document" project="demo-research" classification="public" />
+  </rule>
+  <rule effect="require-approval" action="write">
+    <resource type="document" project="demo-research" folder="drafts" />
+  </rule>
+  <rule effect="deny" action="*">
+    <resource type="credential" />
+  </rule>
+</access-policy>

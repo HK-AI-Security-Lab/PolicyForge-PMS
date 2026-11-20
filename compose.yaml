@@ -31,9 +31,11 @@ services:
     environment:
       NACOS_URL: http://nacos:8080
       NACOS_PASSWORD: ${NACOS_PASSWORD:?Missing Nacos password}
+      POLICYFORGE_SEED_EXAMPLES: ${POLICYFORGE_SEED_EXAMPLES:-true}
     volumes:
-      - ./scripts/bootstrap_nacos.py:/bootstrap.py:ro
-    command: ["python", "/bootstrap.py"]
+      - ./scripts:/scripts:ro
+      - ./examples:/examples:ro
+    command: ["python", "/scripts/bootstrap_nacos.py"]
 
   api:
     image: policyforge-pms:0.1.0

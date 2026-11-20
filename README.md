@@ -20,6 +20,7 @@
 - 直接使用 Nacos 控制台编辑、查看历史、比较版本及回滚。
 - 管理 API Key 和可选只读 API Key；Nacos 账号密码只在服务端使用。
 - 可选 `expected_md5` 透传到 Nacos CAS，避免正文已变更时覆盖旧版本。
+- 首次启动自动导入 10 条多格式策略示例，登录控制台即可查看和编辑。
 
 **保存即发布，没有独立草稿或审批状态。PMS 不执行策略，也不判断某次操作是否允许。**
 
@@ -33,7 +34,7 @@ python3 scripts/init_env.py
 docker compose up -d --build
 ```
 
-首次启动会拉取 Nacos 镜像并初始化管理员。`nacos-init` 完成后 API 才启动；
+首次启动会拉取 Nacos 镜像、初始化管理员，并导入策略示例。`nacos-init` 完成后 API 才启动；
 这个初始化容器退出码为 0 是正常状态。
 
 | 入口 | 地址 / 说明 |
@@ -42,13 +43,16 @@ docker compose up -d --build
 | API 交互文档 | http://localhost:8000/docs |
 | API 就绪检查 | http://localhost:8000/health/ready |
 | Nacos 用户名 | `nacos` |
-| Nacos 密码 | 本机 `.env` 中的 `NACOS_PASSWORD` |
+| Nacos 初始密码 | `nacos`（示例默认值，可通过 `.env` 中的 `NACOS_PASSWORD` 设置） |
 | API 管理密钥 | 本机 `.env` 中的 `POLICYFORGE_API_KEY` |
 | API 只读密钥 | 本机 `.env` 中的 `POLICYFORGE_READ_KEY` |
 
 在 `/docs` 点击 **Authorize**，填入 API Key 后即可调用。
-密钥由初始化脚本随机生成，`.env` 权限为 0600，Git 和 Docker 构建上下文都忽略它。
-脚本不会覆盖已有 `.env`。已有 Nacos 数据卷时应保留原密码，修改 `.env` 不会自动修改 Nacos 密码。
+示例默认账号密码为 **`nacos / nacos`**。API Key、Nacos 签名密钥及节点身份密钥仍随机生成；
+`.env` 权限为 0600，Git 和 Docker 构建上下文都忽略它。
+脚本不会覆盖已有 `.env`。已有数据卷时修改 `.env` 不会自动重置 Nacos 密码：
+请先在 Nacos 控制台修改账号密码，再同步 `.env` 的 `NACOS_PASSWORD`，最后运行
+`docker compose up -d` 更新 API 和初始化容器。
 
 ```bash
 docker compose ps -a
@@ -57,6 +61,45 @@ docker compose logs --tail=80 nacos nacos-init api
 
 默认只绑定本机回环地址。本 Compose 用于单机 / 可信内网部署，不是高可用方案。
 需要远程访问时，在前面部署自己的 HTTPS 网关和身份接入。
+
+## 内置策略示例
+
+默认导入到 `public` 命名空间，应用名统一为 `policyforge-demo`，
+标签包含 `demo`、`agent-research`、`format-<格式>`。在 Nacos 控制台按 `demo` 标签筛选即可找到。
+
+| 分组 | Data ID / 源文件 | 内容 |
+| --- | --- | --- |
+| `NETWORK` | `examples/network.yaml` | 外网域名白名单 |
+| `TOOL_ACCESS` | `examples/tool-access.json` | 工具权限与写入审批 |
+| `AUTHORIZATION` | `examples/authorization.rego` | Rego 读取权限规则 |
+| `GUARDRAILS` | `examples/constraints.md` | 自然语言安全约束 |
+| `SANDBOX` | `examples/sandbox.toml` | 目录、进程和资源限制 |
+| `DATA_PROTECTION` | `examples/data-protection.yaml` | 数据分类、脱敏与外发限制 |
+| `APPROVAL` | `examples/approval-policy.json` | 敏感操作的人工审批 |
+| `RATE_LIMIT` | `examples/rate-limits.properties` | 工具调用频率与执行时间 |
+| `RESOURCE_ACCESS` | `examples/resource-access.xml` | 项目文档访问权限 |
+| `RESOURCE_ACCESS` | `examples/custom-access.dsl` | 自定义规则语言 |
+
+Data ID 是表中文件的文件名，不包含 `examples/`。示例清单和描述在 `examples/catalog.json`。
+这些例子演示不同策略的表达与组织，字段由相应执行组件解释；
+自定义 DSL 没有附带解析器，XML 示例不是 XACML。它们不会因导入 PMS 而自动执行。
+
+初始化导入只补充缺失的 `(namespace, group, data_id)`，已存在的正文、描述和标签全部保留。
+重复启动不会重置你编辑过的样例。导入期间请勿并发编辑同名新策略。
+如果删除示例后不希望下次启动重新补齐，在 `.env` 设置：
+
+```dotenv
+POLICYFORGE_SEED_EXAMPLES=false
+```
+
+需要手动补充缺失示例时，在项目根目录运行（Python 标准库即可）：
+
+```bash
+python3 scripts/seed_examples.py
+```
+
+程序查询样例可以调用 `/api/v1/policies?tag=demo` 或
+`/api/v1/policies?app_name=policyforge-demo`，并携带 `X-API-Key`。
 
 ## 在控制台组织策略
 
@@ -215,12 +258,12 @@ python3 scripts/smoke.py
 脚本验证多格式原文往返、元数据、查询、分页、修改、CAS 冲突、只读密钥和删除。
 单元测试使用 Nacos HTTP 替身，不等同于真实服务器联调。
 
-2026-11-20 验证记录：17 项单元测试通过；Ruff 检查和 Compose 配置校验通过；
+2026-11-20 验证记录：21 项单元测试通过；Ruff 检查和 Compose 配置校验通过；
 已在本机构建 `policyforge-pms:0.1.0`（Linux ARM64），并与 Nacos 3.3.0 真实容器联调。
 多格式原文、标签查询、内容搜索、分页、CAS 冲突、只读权限、删除均通过；
 另验证 XML / Properties / TOML / HTML / DSL 与 CRLF 换行保留，以及 Nacos 重启后的数据持久化。
-测试结束已删除临时策略。AMD64 镜像未在本机验证。
-当前测试依赖有一条 Starlette 关于未来更换测试 HTTP 客户端的弃用提示，不影响这 17 项测试结果。
+测试结束已删除临时策略，保留 10 条可编辑的演示策略。AMD64 镜像未在本机验证。
+当前测试依赖有一条 Starlette 关于未来更换测试 HTTP 客户端的弃用提示，不影响测试结果。
 
 `uv.lock` 锁定开发依赖，`requirements.txt` 包含部署依赖版本和包哈希。更新依赖后重新导出：
 

@@ -7,6 +7,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from seed_examples import seed_examples
+
 
 def post(base, path, fields):
     request = Request(base + path, data=urlencode(fields).encode(), method="POST")
@@ -32,6 +34,8 @@ def main():
             status, body = post(base, "/v3/auth/user/login", login)
             if status == 200 and isinstance(body, dict) and body.get("accessToken"):
                 print("Nacos credentials verified.")
+                if os.getenv("POLICYFORGE_SEED_EXAMPLES", "true").lower() == "true":
+                    seed_examples(base, body["accessToken"])
                 return
             if status in (401, 403):
                 status, body = post(base, "/v3/auth/user/admin", {"password": password})

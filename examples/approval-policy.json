@@ -1,0 +1,17 @@
+{
+  "schema": "policyforge-demo/approval-v1",
+  "agent": "research-agent",
+  "default": "require_approval",
+  "approval": {
+    "bind_to_exact_arguments": true,
+    "single_use": true,
+    "expires_after_seconds": 300,
+    "on_timeout": "deny"
+  },
+  "rules": [
+    {"action": "filesystem.read", "decision": "allow"},
+    {"action": "email.send", "decision": "require_approval"},
+    {"action": "filesystem.delete", "decision": "require_approval"},
+    {"action": "deployment.publish", "decision": "require_approval"}
+  ]
+}
