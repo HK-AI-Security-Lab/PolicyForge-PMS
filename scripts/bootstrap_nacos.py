@@ -7,7 +7,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from seed_examples import seed_examples
+from seed_examples import DEFAULT_NAMESPACE, ensure_namespace, seed_examples
 
 
 def post(base, path, fields):
@@ -29,13 +29,16 @@ def main():
     if not password:
         raise SystemExit("NACOS_PASSWORD must not be empty.")
     login = {"username": "nacos", "password": password}
+    namespace = os.getenv("POLICYFORGE_NAMESPACE", DEFAULT_NAMESPACE)
     for _ in range(90):
         try:
             status, body = post(base, "/v3/auth/user/login", login)
             if status == 200 and isinstance(body, dict) and body.get("accessToken"):
                 print("Nacos credentials verified.")
                 if os.getenv("POLICYFORGE_SEED_EXAMPLES", "true").lower() == "true":
-                    seed_examples(base, body["accessToken"])
+                    seed_examples(base, body["accessToken"], namespace=namespace)
+                else:
+                    ensure_namespace(base, body["accessToken"], namespace)
                 return
             if status in (401, 403):
                 status, body = post(base, "/v3/auth/user/admin", {"password": password})

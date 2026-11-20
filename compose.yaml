@@ -32,6 +32,7 @@ services:
       NACOS_URL: http://nacos:8080
       NACOS_PASSWORD: ${NACOS_PASSWORD:?Missing Nacos password}
       POLICYFORGE_SEED_EXAMPLES: ${POLICYFORGE_SEED_EXAMPLES:-true}
+      POLICYFORGE_NAMESPACE: ${POLICYFORGE_NAMESPACE:-policyforge-pms}
     volumes:
       - ./scripts:/scripts:ro
       - ./examples:/examples:ro
@@ -51,6 +52,7 @@ services:
       NACOS_PASSWORD: ${NACOS_PASSWORD:?Missing Nacos password}
       POLICYFORGE_API_KEY: ${POLICYFORGE_API_KEY:?Missing management API key}
       POLICYFORGE_READ_KEY: ${POLICYFORGE_READ_KEY:?Missing reader API key}
+      POLICYFORGE_NAMESPACE: ${POLICYFORGE_NAMESPACE:-policyforge-pms}
     ports:
       - "127.0.0.1:${POLICYFORGE_PORT:-8000}:8000"
     read_only: true

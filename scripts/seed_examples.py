@@ -7,13 +7,15 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 CONFIG_PATH = "/v3/console/cs/config"
+NAMESPACE_PATH = "/v3/console/core/namespace"
+DEFAULT_NAMESPACE = "policyforge-pms"
 EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
 NATIVE_FORMATS = {"text", "json", "xml", "yaml", "html", "properties", "toml"}
 
 
-def nacos_request(base, token, method, fields):
+def nacos_request(base, token, method, fields, path=CONFIG_PATH):
     encoded = urlencode(fields).encode()
-    url = base + CONFIG_PATH
+    url = base + path
     if method == "GET":
         url += "?" + encoded.decode()
     request = Request(
@@ -29,11 +31,25 @@ def nacos_request(base, token, method, fields):
     return payload["data"]
 
 
-def seed_examples(base, token, examples_dir=EXAMPLES):
+def ensure_namespace(base, token, namespace):
+    namespaces = nacos_request(base, token, "GET", {}, NAMESPACE_PATH + "/list")
+    if any((item.get("namespace") or "public") == namespace for item in namespaces):
+        return
+    fields = {
+        "customNamespaceId": namespace,
+        "namespaceName": "PolicyForge-PMS" if namespace == DEFAULT_NAMESPACE else namespace,
+        "namespaceDesc": "智能体安全策略与访问控制策略",
+    }
+    if nacos_request(base, token, "POST", fields, NAMESPACE_PATH) is not True:
+        raise RuntimeError(f"Failed to create policy namespace: {namespace}")
+
+
+def seed_examples(base, token, examples_dir=EXAMPLES, namespace=DEFAULT_NAMESPACE):
+    ensure_namespace(base, token, namespace)
     catalog = json.loads((examples_dir / "catalog.json").read_text(encoding="utf-8"))
     created = skipped = 0
     for entry in catalog:
-        identity = {"namespaceId": "public", "groupName": entry["group"], "dataId": entry["file"]}
+        identity = {"namespaceId": namespace, "groupName": entry["group"], "dataId": entry["file"]}
         if nacos_request(base, token, "GET", identity) is not None:
             skipped += 1
             continue
@@ -50,7 +66,7 @@ def seed_examples(base, token, examples_dir=EXAMPLES):
         if nacos_request(base, token, "POST", fields) is not True:
             raise RuntimeError(f"Failed to import example: {entry['group']}/{entry['file']}")
         created += 1
-    print(f"Example policies: created {created}, retained {skipped}.")
+    print(f"Example policies in {namespace}: created {created}, retained {skipped}.")
     return {"created": created, "skipped": skipped}
 
 
@@ -81,7 +97,11 @@ def main():
         payload = json.load(response)
     if not isinstance(payload, dict) or not payload.get("accessToken"):
         raise SystemExit("Nacos login failed; check NACOS_USERNAME and NACOS_PASSWORD.")
-    seed_examples(base, payload["accessToken"])
+    seed_examples(
+        base,
+        payload["accessToken"],
+        namespace=values.get("POLICYFORGE_NAMESPACE", DEFAULT_NAMESPACE),
+    )
 
 
 if __name__ == "__main__":

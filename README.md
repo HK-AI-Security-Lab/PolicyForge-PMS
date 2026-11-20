@@ -34,7 +34,7 @@ python3 scripts/init_env.py
 docker compose up -d --build
 ```
 
-首次启动会拉取 Nacos 镜像、初始化管理员，并导入策略示例。`nacos-init` 完成后 API 才启动；
+首次启动会拉取 Nacos 镜像、初始化管理员、创建独立命名空间并导入策略示例。`nacos-init` 完成后 API 才启动；
 这个初始化容器退出码为 0 是正常状态。
 
 | 入口 | 地址 / 说明 |
@@ -64,8 +64,16 @@ docker compose logs --tail=80 nacos nacos-init api
 
 ## 内置策略示例
 
-默认导入到 `public` 命名空间，应用名统一为 `policyforge-demo`，
-标签包含 `demo`、`agent-research`、`format-<格式>`。在 Nacos 控制台按 `demo` 标签筛选即可找到。
+默认导入到独立命名空间 **`PolicyForge-PMS`**（ID：`policyforge-pms`）。
+在 Nacos 控制台顶部的“命名空间”下拉框选择 `PolicyForge-PMS(policyforge-pms)`，
+再进入左侧“配置管理 → 配置列表”，即可直接查看 10 条策略，无需标签筛选。
+`public` 中可能还有 Nacos 的内部配置、Skill 和 AgentSpec 资源，不是本项目的策略样例。
+
+应用名统一为 `policyforge-demo`，标签包含 `demo`、`agent-research`、`format-<格式>`。
+标签可用于 PMS API 查询；本项目使用的 Nacos 3.3.0 新版配置列表没有标签筛选框，
+页面提供 Data ID、Group 和归属应用筛选，界面操作以命名空间和这些字段为主。
+默认命名空间由 `.env` 中的 `POLICYFORGE_NAMESPACE=policyforge-pms` 指定，
+API 默认读写、就绪检查和示例导入共用此设置。初始化不会删除或修改其他命名空间的配置。
 
 | 分组 | Data ID / 源文件 | 内容 |
 | --- | --- | --- |
@@ -98,7 +106,7 @@ POLICYFORGE_SEED_EXAMPLES=false
 python3 scripts/seed_examples.py
 ```
 
-程序查询样例可以调用 `/api/v1/policies?tag=demo` 或
+程序查询样例可以直接调用 `/api/v1/policies`，也可调用 `/api/v1/policies?tag=demo` 或
 `/api/v1/policies?app_name=policyforge-demo`，并携带 `X-API-Key`。
 
 ## 在控制台组织策略
@@ -107,7 +115,7 @@ python3 scripts/seed_examples.py
 
 | 字段 | 例子 | 用途 |
 | --- | --- | --- |
-| Namespace | `public`、`dev`、`prod` | 环境；新命名空间在控制台创建 |
+| Namespace | `policyforge-pms`、`dev`、`prod` | 独立策略空间 / 环境；其他命名空间可在控制台创建 |
 | Group | `NETWORK`、`TOOL_ACCESS`、`SANDBOX` | 策略类别 |
 | Data ID | `research-network.yaml` | 唯一名称，建议带扩展名 |
 | Tags | `agent-research,team-security,format-yaml` | 适用对象、团队、原始格式 |
@@ -136,7 +144,8 @@ API 自动维护一个保留标签 `format-<格式>`，例如 `format-rego`。
 | PUT | `/api/v1/policies/{group}/{data_id}` | 创建或完整替换并发布 |
 | DELETE | `/api/v1/policies/{group}/{data_id}` | 删除策略 |
 
-单条策略接口接受 `?namespace=public`，省略时使用 `public`。
+策略接口省略 `namespace` 时使用 `POLICYFORGE_NAMESPACE`，默认 `policyforge-pms`。
+访问其他命名空间时显式传入，例如 `?namespace=public` 或 `?namespace=dev`。
 
 ### 写入任意文本策略
 
@@ -182,7 +191,7 @@ PUT 是**完整替换**：省略 `description`、`tags`、`app_name` 就清空�
 
 | 参数 | 例子 | 说明 |
 | --- | --- | --- |
-| `namespace` | `public` | 命名空间 ID，非显示名称 |
+| `namespace` | `policyforge-pms` | 命名空间 ID，非显示名称；省略使用配置的默认空间 |
 | `data_id` | `research*` | Nacos 名称匹配模式 |
 | `group` | `NETWORK` | 分组匹配模式 |
 | `tag` | `agent-research` | 单个标签，避免多标签 AND/OR 歧义 |
@@ -214,6 +223,7 @@ Dockerfile 只封装轻量 API；Nacos 作为独立容器运行。Compose 合并
 NACOS_URL=http://your-nacos-console:8080
 NACOS_USERNAME=your-service-account
 NACOS_PASSWORD=your-service-account-password
+POLICYFORGE_NAMESPACE=policyforge-pms
 POLICYFORGE_API_KEY=replace-with-at-least-32-random-characters
 POLICYFORGE_READ_KEY=replace-with-a-different-random-key
 ```
@@ -227,7 +237,8 @@ docker run -d --name policyforge-pms \
 
 `NACOS_URL` 是 **Console API 地址**，不是 SDK 的 8848 端口；不要添加旧版 `/nacos` 前缀。
 其他 Nacos 版本需要自行做兼容验证。该适配器使用默认用户名/密码登录，未实现 OIDC 登录。
-已有部署建议使用具有相应命名空间读写权限的服务账号；就绪检查目前查询 `public`，需允许读取它。
+已有部署请先创建 `POLICYFORGE_NAMESPACE` 指定的命名空间，并使用具有该空间读写权限的服务账号；
+就绪检查查询同一个默认空间。独立运行 API 不会自动创建空间，Compose 初始化容器会负责创建。
 `POLICYFORGE_READ_KEY` 可省略；管理密钥和 Nacos 密码必须设置。
 
 ## 开发与验证
@@ -258,11 +269,12 @@ python3 scripts/smoke.py
 脚本验证多格式原文往返、元数据、查询、分页、修改、CAS 冲突、只读密钥和删除。
 单元测试使用 Nacos HTTP 替身，不等同于真实服务器联调。
 
-2026-11-20 验证记录：21 项单元测试通过；Ruff 检查和 Compose 配置校验通过；
+2026-11-20 验证记录：24 项单元测试通过；Ruff 检查和 Compose 配置校验通过；
 已在本机构建 `policyforge-pms:0.1.0`（Linux ARM64），并与 Nacos 3.3.0 真实容器联调。
 多格式原文、标签查询、内容搜索、分页、CAS 冲突、只读权限、删除均通过；
 另验证 XML / Properties / TOML / HTML / DSL 与 CRLF 换行保留，以及 Nacos 重启后的数据持久化。
 测试结束已删除临时策略，保留 10 条可编辑的演示策略。AMD64 镜像未在本机验证。
+已验证独立命名空间创建、默认命名空间读写和显式覆盖；控制台显示 `PolicyForge-PMS` 共 10 条配置。
 当前测试依赖有一条 Starlette 关于未来更换测试 HTTP 客户端的弃用提示，不影响测试结果。
 
 `uv.lock` 锁定开发依赖，`requirements.txt` 包含部署依赖版本和包哈希。更新依赖后重新导出：

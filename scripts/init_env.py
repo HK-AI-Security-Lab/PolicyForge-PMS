@@ -17,6 +17,7 @@ def main(path: Path | None = None):
         "NACOS_CONSOLE_PORT": "8080",
         "POLICYFORGE_PORT": "8000",
         "POLICYFORGE_SEED_EXAMPLES": "true",
+        "POLICYFORGE_NAMESPACE": "policyforge-pms",
     }
     try:
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)

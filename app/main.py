@@ -20,7 +20,15 @@ CONFIG_PATH = "/v3/console/cs/config"
 NATIVE_FORMATS = {"text", "json", "xml", "yaml", "html", "properties", "toml"}
 TAG_PREFIX = "format-"
 Identifier = Annotated[str, Path(min_length=1, max_length=128, pattern=r"^[\w.:-]+$")]
-Namespace = Annotated[str, Query(min_length=1, max_length=128, pattern=r"^[\w.:-]+$")]
+Namespace = Annotated[
+    str | None,
+    Query(
+        min_length=1,
+        max_length=128,
+        pattern=r"^[\w.:-]+$",
+        description="Omit to use POLICYFORGE_NAMESPACE (default: policyforge-pms).",
+    ),
+]
 
 
 @dataclass(frozen=True)
@@ -31,6 +39,7 @@ class Settings:
     api_key: str
     read_key: str = ""
     timeout: float = 10.0
+    namespace: str = "policyforge-pms"
 
     @classmethod
     def from_env(cls):
@@ -41,6 +50,7 @@ class Settings:
             api_key=os.getenv("POLICYFORGE_API_KEY", ""),
             read_key=os.getenv("POLICYFORGE_READ_KEY", ""),
             timeout=float(os.getenv("NACOS_TIMEOUT", "10")),
+            namespace=os.getenv("POLICYFORGE_NAMESPACE", "policyforge-pms"),
         )
         if not values.password or len(values.api_key) < 32:
             raise RuntimeError(
@@ -48,6 +58,8 @@ class Settings:
             )
         if values.read_key and (len(values.read_key) < 32 or values.read_key == values.api_key):
             raise RuntimeError("POLICYFORGE_READ_KEY must be distinct and at least 32 characters.")
+        if not re.fullmatch(r"[\w.:-]{1,128}", values.namespace):
+            raise RuntimeError("POLICYFORGE_NAMESPACE must be a valid namespace ID.")
         return values
 
 
@@ -129,6 +141,11 @@ def create_app(settings: Settings | None = None, transport=None) -> FastAPI:
     )
     key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
+    def resolve_namespace(request: Request, namespace: Namespace = None):
+        return namespace if namespace is not None else request.app.state.settings.namespace
+
+    PolicyNamespace = Annotated[str, Depends(resolve_namespace)]
+
     def authorize(request: Request, key: str | None = Security(key_header)):
         cfg = request.app.state.settings
         if key and secrets.compare_digest(key.encode(), cfg.api_key.encode()):
@@ -157,7 +174,7 @@ def create_app(settings: Settings | None = None, transport=None) -> FastAPI:
                 "GET",
                 CONFIG_PATH + "/list",
                 params={
-                    "namespaceId": "public",
+                    "namespaceId": request.app.state.settings.namespace,
                     "dataId": "",
                     "groupName": "",
                     "pageNo": 1,
@@ -177,7 +194,7 @@ def create_app(settings: Settings | None = None, transport=None) -> FastAPI:
     @app.get("/api/v1/policies", dependencies=secured, tags=["policies"])
     async def list_policies(
         request: Request,
-        namespace: Namespace = "public",
+        namespace: PolicyNamespace,
         data_id: str = Query(default="", max_length=128),
         group: str = Query(default="", max_length=128),
         tag: str = Query(default="", max_length=64, pattern=r"^[^,]*$"),
@@ -224,7 +241,7 @@ def create_app(settings: Settings | None = None, transport=None) -> FastAPI:
 
     @app.get("/api/v1/policies/{group}/{data_id}/raw", dependencies=secured, tags=["policies"])
     async def raw(
-        request: Request, group: Identifier, data_id: Identifier, namespace: Namespace = "public"
+        request: Request, group: Identifier, data_id: Identifier, namespace: PolicyNamespace
     ):
         item = await fetch(request, group, data_id, namespace)
         return PlainTextResponse(
@@ -237,7 +254,7 @@ def create_app(settings: Settings | None = None, transport=None) -> FastAPI:
 
     @app.get("/api/v1/policies/{group}/{data_id}", dependencies=secured, tags=["policies"])
     async def get_policy(
-        request: Request, group: Identifier, data_id: Identifier, namespace: Namespace = "public"
+        request: Request, group: Identifier, data_id: Identifier, namespace: PolicyNamespace
     ):
         return await fetch(request, group, data_id, namespace)
 
@@ -247,7 +264,7 @@ def create_app(settings: Settings | None = None, transport=None) -> FastAPI:
         group: Identifier,
         data_id: Identifier,
         policy: PolicyWrite,
-        namespace: Namespace = "public",
+        namespace: PolicyNamespace,
     ):
         policy_format = policy.format or PurePosixPath(data_id).suffix.lstrip(".").lower() or "text"
         policy_format = {"yml": "yaml", "txt": "text"}.get(policy_format, policy_format)
@@ -280,7 +297,7 @@ def create_app(settings: Settings | None = None, transport=None) -> FastAPI:
 
     @app.delete("/api/v1/policies/{group}/{data_id}", dependencies=secured, tags=["policies"])
     async def delete_policy(
-        request: Request, group: Identifier, data_id: Identifier, namespace: Namespace = "public"
+        request: Request, group: Identifier, data_id: Identifier, namespace: PolicyNamespace
     ):
         success = await request.app.state.nacos.request(
             "DELETE",

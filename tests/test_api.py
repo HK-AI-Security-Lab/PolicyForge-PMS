@@ -1,4 +1,5 @@
 import hashlib
+from dataclasses import replace
 from urllib.parse import parse_qs
 
 import httpx
@@ -221,3 +222,24 @@ def test_namespace_list(api):
     response = client.get("/api/v1/namespaces", headers=READ)
     assert response.status_code == 200
     assert response.json()[0]["namespaceShowName"] == "public"
+
+
+@pytest.mark.parametrize("default_namespace", ["policyforge-pms", "custom-policies"])
+def test_all_routes_use_configured_namespace_unless_explicitly_overridden(default_namespace):
+    stub = NacosStub()
+    config = replace(SETTINGS, namespace=default_namespace)
+    with TestClient(create_app(config, httpx.MockTransport(stub))) as client:
+        path = "/api/v1/policies/TOOLS/namespaced.txt"
+        for query, expected in [("", default_namespace), ("?namespace=public", "public")]:
+            result = client.put(path + query, headers=MANAGE, json={"content": expected})
+            assert result.status_code == 200
+            assert result.json()["namespace"] == expected
+            assert (expected, "TOOLS", "namespaced.txt") in stub.records
+            assert client.get(path + query, headers=READ).json()["namespace"] == expected
+            assert client.get(path + "/raw" + query, headers=READ).text == expected
+            assert client.get("/api/v1/policies" + query, headers=READ).status_code == 200
+            assert stub.calls[-1].url.params["namespaceId"] == expected
+            assert client.delete(path + query, headers=MANAGE).status_code == 200
+            assert stub.calls[-1].url.params["namespaceId"] == expected
+        assert client.get("/health/ready").status_code == 200
+        assert stub.calls[-1].url.params["namespaceId"] == default_namespace

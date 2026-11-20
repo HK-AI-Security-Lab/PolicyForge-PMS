@@ -23,6 +23,7 @@ def test_demo_env_defaults_and_preserves_existing_file(tmp_path):
     )
     assert values["NACOS_PASSWORD"] == "nacos"
     assert values["POLICYFORGE_SEED_EXAMPLES"] == "true"
+    assert values["POLICYFORGE_NAMESPACE"] == "policyforge-pms"
     assert len(base64.b64decode(values["NACOS_AUTH_TOKEN"])) >= 32
     assert len(values["POLICYFORGE_API_KEY"]) >= 32
     assert values["POLICYFORGE_API_KEY"] != values["POLICYFORGE_READ_KEY"]
@@ -48,8 +49,18 @@ def test_catalog_files_exist_and_structured_examples_parse():
 
 def test_seed_retains_edits_and_only_recreates_missing_examples(monkeypatch):
     records = {}
+    namespaces = []
+    namespace_creations = []
 
-    def request(base, token, method, fields):
+    def request(base, token, method, fields, path=seed_examples.CONFIG_PATH):
+        if path.endswith("/namespace/list"):
+            return namespaces
+        if path == seed_examples.NAMESPACE_PATH:
+            namespace_creations.append(fields.copy())
+            namespaces.append({"namespace": fields["customNamespaceId"]})
+            return True
+        assert namespaces == [{"namespace": "policyforge-pms"}]
+        assert fields["namespaceId"] == "policyforge-pms"
         key = fields["groupName"], fields["dataId"]
         if method == "GET":
             return records.get(key)
@@ -77,13 +88,33 @@ def test_seed_retains_edits_and_only_recreates_missing_examples(monkeypatch):
     assert records[edited]["configTags"] == "user-tag"
     assert records[("AUTHORIZATION", "authorization.rego")]["type"] == "text"
     assert records[("SANDBOX", "sandbox.toml")]["type"] == "toml"
+    assert len(namespace_creations) == 1
+    assert namespace_creations[0]["namespaceName"] == "PolicyForge-PMS"
 
 
 def test_seed_fails_when_nacos_does_not_save(monkeypatch):
+    def request(base, token, method, fields, path=seed_examples.CONFIG_PATH):
+        if path.endswith("/namespace/list"):
+            return [{"namespace": "policyforge-pms"}]
+        return None if method == "GET" else False
+
     monkeypatch.setattr(
         seed_examples,
         "nacos_request",
-        lambda base, token, method, fields: None if method == "GET" else False,
+        request,
     )
     with pytest.raises(RuntimeError, match="Failed to import example"):
         seed_examples.seed_examples("http://nacos", "token", EXAMPLES)
+
+
+def test_seed_stops_if_namespace_cannot_be_created(monkeypatch):
+    calls = []
+
+    def request(base, token, method, fields, path=seed_examples.CONFIG_PATH):
+        calls.append(path)
+        return [] if method == "GET" else False
+
+    monkeypatch.setattr(seed_examples, "nacos_request", request)
+    with pytest.raises(RuntimeError, match="Failed to create policy namespace"):
+        seed_examples.seed_examples("http://nacos", "token", EXAMPLES)
+    assert seed_examples.CONFIG_PATH not in calls
